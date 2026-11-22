@@ -49,22 +49,16 @@ class DocuBot:
     # -----------------------------------------------------------
 
     def build_index(self, documents):
-        """
-        TODO (Phase 1):
-        Build a tiny inverted index mapping lowercase words to the documents
-        they appear in.
-
-        Example structure:
-        {
-            "token": ["AUTH.md", "API_REFERENCE.md"],
-            "database": ["DATABASE.md"]
-        }
-
-        Keep this simple: split on whitespace, lowercase tokens,
-        ignore punctuation if needed.
-        """
         index = {}
-        # TODO: implement simple indexing
+        for filename, text in documents:
+            for word in text.split():
+                word = word.lower().strip(".,!?:;()\"'`")
+                if not word:
+                    continue
+                if word not in index:
+                    index[word] = []
+                if filename not in index[word]:
+                    index[word].append(filename)
         return index
 
     # -----------------------------------------------------------
@@ -72,27 +66,34 @@ class DocuBot:
     # -----------------------------------------------------------
 
     def score_document(self, query, text):
-        """
-        TODO (Phase 1):
-        Return a simple relevance score for how well the text matches the query.
-
-        Suggested baseline:
-        - Convert query into lowercase words
-        - Count how many appear in the text
-        - Return the count as the score
-        """
-        # TODO: implement scoring
-        return 0
+        text_lower = text.lower()
+        score = 0
+        for word in query.lower().split():
+            word = word.strip(".,!?:;()\"'`")
+            if word and word in text_lower:
+                score += 1
+        return score
 
     def retrieve(self, query, top_k=3):
-        """
-        TODO (Phase 1):
-        Use the index and scoring function to select top_k relevant document snippets.
+        candidates = set()
+        for word in query.lower().split():
+            word = word.strip(".,!?:;()\"'`")
+            if word in self.index:
+                candidates.update(self.index[word])
 
-        Return a list of (filename, text) sorted by score descending.
-        """
         results = []
-        # TODO: implement retrieval logic
+        for filename, text in self.documents:
+            if filename in candidates:
+                for chunk in text.split("\n\n"):
+                    chunk = chunk.strip()
+                    if not chunk:
+                        continue
+                    score = self.score_document(query, chunk)
+                    if score > 0:
+                        results.append((score, filename, chunk))
+
+        results.sort(key=lambda r: r[0], reverse=True)
+        results = [(filename, text) for score, filename, text in results]
         return results[:top_k]
 
     # -----------------------------------------------------------
